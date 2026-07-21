@@ -1,6 +1,5 @@
 import streamlit as st
 
-# Configuración de página
 st.set_page_config(page_title="P.I.C.O.S Chile Weather", page_icon="⚡", layout="wide")
 
 from config import aplicar_estilos_base
@@ -18,15 +17,14 @@ aplicar_estilos_base()
 st.sidebar.title("⚡ P.I.C.O.S Weather")
 st.sidebar.markdown("---")
 
-# 1. Selector de Modo (Hiper-personalización)
+# Selector de Perfil
 modo_perfil = st.sidebar.radio(
-    "🎯 Modo de Uso / Perfil",
+    "Modo de Uso / Perfil",
     ["🏃 Ciudadano / Deporte", "🌾 Agrícola / Industria", "⚠️ Prevención de Riesgo"]
 )
 
 st.sidebar.markdown("---")
 
-# Selección de Ciudad Central
 ciudades = {
     "Santiago": (-33.4489, -70.6693),
     "Valparaíso / Quilpué": (-33.0472, -71.6127),
@@ -35,15 +33,15 @@ ciudades = {
     "Puerto Montt": (-41.4693, -72.9424)
 }
 
-ciudad_sel = st.sidebar.selectbox("📍 Selección de Zona", list(ciudades.keys()))
+ciudad_sel = st.sidebar.selectbox("Selección de Zona", list(ciudades.keys()))
 lat, lon = ciudades[ciudad_sel]
 
 st.sidebar.markdown("---")
 
-# 2. Selector de Capas para el Mapa Geoespacial
+# Selector de Capas para el Mapa
 capa_mapa = st.sidebar.selectbox(
-    "🗺️ Capa Geoespacial",
-    ["🌡️ Temperatura (°C)", "💨 Velocidad del Viento (km/h)", "☀️ Radiación / Índice UV"]
+    "Capa Geoespacial",
+    ["Temperatura (°C)", "Velocidad del Viento (km/h)", "Radiación / Índice UV"]
 )
 
 # --- CARGA DE DATOS ---
@@ -52,7 +50,7 @@ datos_clima = obtener_datos_clima(lat, lon)
 if datos_clima and "current" in datos_clima:
     curr = datos_clima["current"]
     
-    # Banner Principal Hero
+    # Hero Card
     st.markdown(f'''
         <div class="hero-card">
             <span class="live-badge"></span> <small>TELEMÉTRICA EN VIVO - MODO: {modo_perfil.upper()}</small>
@@ -66,15 +64,14 @@ if datos_clima and "current" in datos_clima:
     renderizar_alertas(alertas)
     st.markdown("---")
 
-    # 2. Tarjetas Personalizadas por Perfil
-    st.markdown(f"### 📊 Métricas Clave ({modo_perfil})")
+    # 2. Tarjetas con íconos vectoriales animados
+    st.markdown(f"### Métricas Clave ({modo_perfil})")
     renderizar_tarjetas_adaptativas(curr, modo_perfil)
     st.markdown("---")
 
-    # 3. Mapa Multicapa
-    st.markdown(f"### 🗺️ Análisis Geoespacial - {capa_mapa}")
+    # 3. Mapa con Zoom delimitado a Chile
+    st.markdown(f"### Análisis Geoespacial - {capa_mapa}")
     
-    # Cargar pequeña red nacional para el mapa
     datos_red_nacional = [
         {"nombre": "Santiago", "lat": -33.4489, "lon": -70.6693, "temperatura": curr.get("temperature_2m", 20), "viento": curr.get("wind_speed_10m", 12), "uv": curr.get("uv_index", 5)},
         {"nombre": "Valparaíso", "lat": -33.0472, "lon": -71.6127, "temperatura": curr.get("temperature_2m", 18) - 2, "viento": curr.get("wind_speed_10m", 12) + 10, "uv": curr.get("uv_index", 5)},
@@ -87,4 +84,4 @@ if datos_clima and "current" in datos_clima:
     st.plotly_chart(fig_mapa, width="stretch")
 
 else:
-    st.error("No se pudo conectar con la red de telemetría de Open-Meteo. Verifica tu conexión a internet.")
+    st.error("No se pudo conectar con la red de telemetría.")
