@@ -1,241 +1,194 @@
 import streamlit as st
-import pandas as pd
 from datetime import datetime
 import pytz
+import plotly.express as px
+import plotly.graph_objects as go
 from streamlit_autorefresh import st_autorefresh
 
-# Importaciones correctas de tus módulos locales
-from config import load_css
-from telemetry import NODOS_CHILE, cargar_telemetria_real, calcular_indices_operativos
-from components import (
-    render_header, 
-    render_chart_historico,
-    render_mapa_3d_chile,
-    generar_html_reporte_pdf,
-    SVG_ICONS
-)
+from telemetry import NODOS_CHILE, obtener_clima_en_vivo, obtener_resumen_red_nodos
+from config import aplicar_estilos_base
 
-# -----------------------------------------------------------------------------
-# 1. CONFIGURACIÓN DE PÁGINA
-# -----------------------------------------------------------------------------
+# Configuración de página ancha para aprovechar toda la pantalla
 st.set_page_config(
-    page_title="F.U.I.S.T.E. B.U.E.N.O. - Telemetría Climática", 
-    page_icon="⚡", 
-    layout="wide"
+    page_title="P.I.C.O.S Chile Weather",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# -----------------------------------------------------------------------------
-# 2. AUTO-REFRESCO CADA 500 MS (Reloj continuo en vivo sin saltos)
-# -----------------------------------------------------------------------------
-st_autorefresh(interval=500, limit=None, key="fuiste_clock_refresh")
+# Aplicar estilos CSS Glassmorphism
+aplicar_estilos_base()
 
-# -----------------------------------------------------------------------------
-# 3. BARRA LATERAL TÁCTICA
-# -----------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown(f"""
-        <div style='display:flex; align-items:center; gap:8px; font-family:Orbitron; font-size: 0.85rem; font-weight:800; letter-spacing:1px; color:#00F0FF; margin-bottom:12px;'>
-            {SVG_ICONS['grid']} <span>CONSOLA F.U.I.S.T.E. v2.0</span>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    modulo_seleccionado = st.radio(
-        "SELECCIONAR MÓDULO:",
-        options=[
-            "[LIVE] Telemetría en Vivo",
-            "[EVAL] Análisis de Riesgos Estacionales",
-            "[STREAM] Consola de Datos JSON",
-            "[REPORT] Exportar Informe Técnico"
-        ],
-        index=0
+# Refresco dinámico automático cada 30 segundos
+st_autorefresh(interval=30000, limit=None, key="clima_refresh")
+
+# --- HEADER SUPERIOR COMPACTO ---
+col_head_title, col_head_select = st.columns([2.5, 1])
+
+with col_head_title:
+    st.markdown(
+        "## ⚡ **P.I.C.O.S** `Chile Weather` &nbsp;<span class='live-badge'></span>"
+        "<small style='font-size:0.85rem; color:#38BDF8;'>EN VIVO</small>", 
+        unsafe_allow_html=True
     )
 
-    st.markdown("---")
-    
-    st.markdown(f"""
-        <div style='display:flex; align-items:center; gap:8px; font-family:Orbitron; font-size: 0.85rem; font-weight:800; letter-spacing:1px; color:#00FF66; margin-bottom:12px;'>
-            {SVG_ICONS['map']} <span>RED DE NODOS CHILE</span>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    zona_seleccionada = st.selectbox(
-        "SELECCIONAR NODO:",
+with col_head_select:
+    ciudad_seleccionada = st.selectbox(
+        "📍 Seleccionar Estación:",
         options=list(NODOS_CHILE.keys()),
-        index=5 # Valparaíso / Viña por defecto
+        index=6,
+        label_visibility="collapsed"
     )
 
-    info_nodo = NODOS_CHILE[zona_seleccionada]
+nodo_info = NODOS_CHILE[ciudad_seleccionada]
 
-    st.markdown(f"""
-    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); font-size: 0.78rem;">
-        <div><strong>REGIÓN:</strong> {info_nodo['region']}</div>
-        <div><strong>LAT:</strong> {info_nodo['lat']} | <strong>LON:</strong> {info_nodo['lon']}</div>
-        <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
-            <span class="live-dot" style="width:6px; height:6px;"></span>
-            <strong style="color:#00FF66;">STREAMING SATELITAL OK</strong>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# Consulta de datos en vivo
+clima, df_hourly, df_daily = obtener_clima_en_vivo(nodo_info['lat'], nodo_info['lon'])
 
-    st.markdown("---")
+if clima:
+    # Banner de Alerta Dinámica (si aplica)
+    if clima['temp'] >= 30:
+        st.error(f"🔥 **Alerta Térmica:** {clima['temp']}°C registrados en {ciudad_seleccionada}.")
+    elif clima['viento'] >= 30:
+        st.warning(f"💨 **Aviso Metereológico:** Viento fuerte de {clima['viento']} km/h.")
 
-    theme_mode = st.radio(
-        "APARIENCIA UI:",
-        options=["Oscuro Cyberpunk", "Claro Futurista"],
-        index=0
-    )
+    # =========================================================================
+    # ESTRUCTURA DE VISTA ÚNICA EN 3 COLUMNAS (TODO VISIBLE A LA VEZ)
+    # =========================================================================
+    col_izq, col_centro, col_der = st.columns([1.1, 1.4, 1.5])
 
-# -----------------------------------------------------------------------------
-# 4. CARGA DE ESTILOS Y DATOS EN REAL-TIME
-# -----------------------------------------------------------------------------
-load_css(theme_mode)
-
-# Llamada a las funciones REALES de telemetry.py
-data, df_hourly = cargar_telemetria_real(info_nodo["lat"], info_nodo["lon"])
-indices = calcular_indices_operativos(data['Temp'], data['Humedad'], data['Viento'], data['UV'])
-
-# Encabezado con hora en vivo
-render_header("America/Santiago", zona_seleccionada, theme_mode)
-
-# -----------------------------------------------------------------------------
-# 5. RENDERIZADO DE MÓDULOS
-# -----------------------------------------------------------------------------
-
-if "[LIVE]" in modulo_seleccionado:
-    col_left, col_right = st.columns([5.5, 4.5])
-
-    with col_left:
-        m1, m2, m3 = st.columns(3)
-        
-        with m1:
-            st.markdown(f"""
-                <div class="cyber-panel">
-                    <div class="panel-tag">
-                        <span>F.U.I.S.T.E. TEMP</span>
-                        <span style="color:#00F0FF;">REAL API</span>
-                    </div>
-                    <div class="metric-big" style="color: #00F0FF;">
-                        {data['Temp']}<span class="unit-label">°C</span>
-                    </div>
-                    <div class="sub-status" style="color:#00FF66;">
-                        <span>ST: {data['Sensacion']}°C</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        with m2:
-            st.markdown(f"""
-                <div class="cyber-panel-green">
-                    <div class="panel-tag panel-tag-green">
-                        <span>HUMEDAD</span>
-                        <span style="color:#00FF66;">ACTIVA</span>
-                    </div>
-                    <div class="metric-big" style="color: #00FF66;">
-                        {data['Humedad']}<span class="unit-label">%</span>
-                    </div>
-                    <div class="sub-status" style="color:#00F0FF;">
-                        <span>ROCÍO: {indices['PuntoRocio']}°C</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        with m3:
-            st.markdown(f"""
-                <div class="cyber-panel">
-                    <div class="panel-tag">
-                        <span>VIENTO & BARO</span>
-                        <span style="color:#FF0055;">VECTOR</span>
-                    </div>
-                    <div class="metric-big" style="color: #FF0055;">
-                        {data['Viento']}<span class="unit-label">km/h</span>
-                    </div>
-                    <div class="sub-status" style="color:#E2E8F0;">
-                        <span>PRES: {data['Presion']} hPa</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
+    # -------------------------------------------------------------------------
+    # COLUMNA IZQUIERDA: Hero principal + Tacómetro UV
+    # -------------------------------------------------------------------------
+    with col_izq:
+        # 1. Hero Card Ciudad
         st.markdown(f"""
-            <div class="cyber-panel" style="margin-top: 4px;">
-                <div class="panel-tag">
-                    <span style="display:flex; align-items:center; gap:6px;">
-                        {SVG_ICONS['activity']} [ PRONÓSTICO Y CURVA REAL DE 24 HORAS ]
-                    </span>
-                    <span style="opacity: 0.6;">OPEN-METEO FEED</span>
+            <div class="hero-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div class="hero-city">{ciudad_seleccionada}</div>
+                        <small>{nodo_info['region']} • {clima['condicion']}</small>
+                        <div class="hero-temp" style="margin-top: 10px;">{clima['temp']}°</div>
+                        <small>Sensación: {clima['sensacion']}°C</small>
+                    </div>
+                    <div style="font-size: 4rem; line-height: 1;">
+                        {clima['icono']}
+                    </div>
                 </div>
+            </div>
         """, unsafe_allow_html=True)
-        render_chart_historico(df_hourly, theme_mode)
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_right:
-        st.markdown(f"""
-            <div class="cyber-panel">
-                <div class="panel-tag">
-                    <span style="display:flex; align-items:center; gap:6px;">
-                        {SVG_ICONS['radar']} [ UBICACIÓN DEL NODO // CHILE ]
-                    </span>
-                    <span style="color:#FF0055;">● RASTER LOCKED</span>
+        # 2. Tacómetro UV
+        fig_uv = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=clima['uv'],
+            domain={'x': [0, 1], 'y': [0, 1]},
+            title={'text': "ÍNDICE UV", 'font': {'size': 12, 'color': '#94A3B8'}},
+            gauge={
+                'axis': {'range': [None, 12], 'tickwidth': 1, 'tickcolor': "#38BDF8"},
+                'bar': {'color': "#00F0FF"},
+                'bgcolor': "rgba(15, 23, 42, 0.6)",
+                'borderwidth': 1,
+                'bordercolor': "#1E293B",
+                'steps': [
+                    {'range': [0, 3], 'color': 'rgba(16, 185, 129, 0.2)'},
+                    {'range': [3, 6], 'color': 'rgba(245, 158, 11, 0.2)'},
+                    {'range': [6, 12], 'color': 'rgba(239, 68, 68, 0.2)'}
+                ],
+            }
+        ))
+        fig_uv.update_layout(
+            height=170, 
+            margin=dict(l=10, r=10, t=25, b=10),
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color="#F8FAFC")
+        )
+        st.plotly_chart(fig_uv, use_container_width="stretch")
+
+    # -------------------------------------------------------------------------
+    # COLUMNA CENTRO: Grid de Métricas + Tendencia 24 Horas
+    # -------------------------------------------------------------------------
+    with col_centro:
+        # 1. Grid 2x2 de métricas rápidas
+        c_m1, c_m2 = st.columns(2)
+        with c_m1:
+            st.markdown(f"""
+                <div class="glass-card">
+                    <div class="metric-title">💧 Humedad</div>
+                    <div class="metric-num">{clima['humedad']}%</div>
                 </div>
-        """, unsafe_allow_html=True)
-        render_mapa_3d_chile(NODOS_CHILE, zona_seleccionada, theme_mode)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-elif "[EVAL]" in modulo_seleccionado:
-    st.markdown(f"""
-        <div class="cyber-panel">
-            <div class="panel-tag">
-                <span style="display:flex; align-items:center; gap:6px;">
-                    {SVG_ICONS['shield']} MÓDULO F.U.I.S.T.E. DE EVALUACIÓN DE RIESGOS
-                </span>
-                <span style="color:{indices['ColorIncendio']}">{indices['RiesgoIncendio']}</span>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
-                <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
-                    <h4 style="color:#FF0055; margin-top:0;">🔥 ALERTA DE INCENDIOS FORESTALES</h4>
-                    <p style="font-size: 0.9rem;">Índice Operativo: <strong>{indices['RiesgoIncendio']}</strong></p>
-                    <p style="font-size: 0.8rem; opacity:0.8;">Calculado por brecha de rocío ({indices['PuntoRocio']}°C) y viento ({data['Viento']} km/h).</p>
+                <div class="glass-card">
+                    <div class="metric-title">💨 Viento</div>
+                    <div class="metric-num">{clima['viento']} <small style="font-size:0.8rem;">km/h</small></div>
                 </div>
-                <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
-                    <h4 style="color:#00F0FF; margin-top:0;">❄️ ANÁLISIS AGROCLIMÁTICO</h4>
-                    <p style="font-size: 0.9rem;">Riesgo Helada: <strong style="color:{indices['ColorHelada']};">{indices['RiesgoHelada']}</strong></p>
-                    <p style="font-size: 0.8rem; opacity:0.8;">Radiación UV: <strong>{data['UV']}</strong> | Precipitación: <strong>{data['Precip']} mm</strong></p>
+            """, unsafe_allow_html=True)
+        with c_m2:
+            st.markdown(f"""
+                <div class="glass-card">
+                    <div class="metric-title">👁️ Visibilidad</div>
+                    <div class="metric-num">{clima['visibilidad']} <small style="font-size:0.8rem;">km</small></div>
                 </div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+                <div class="glass-card">
+                    <div class="metric-title">⏲️ Presión</div>
+                    <div class="metric-num">{int(clima['presion'])} <small style="font-size:0.8rem;">hPa</small></div>
+                </div>
+            """, unsafe_allow_html=True)
 
-elif "[STREAM]" in modulo_seleccionado:
-    st.markdown(f"""
-        <div class="cyber-panel">
-            <div class="panel-tag">
-                <span>[ CONSOLA DE STREAMING RAW DATA // JSON FEED ]</span>
-                <span style="color:#00FF66;">● ENGINE F.U.I.S.T.E. OK</span>
-            </div>
-    """, unsafe_allow_html=True)
-    st.json({
-        "sistema": "F.U.I.S.T.E. B.U.E.N.O. Engine",
-        "nodo_activo": zona_seleccionada,
-        "coordenadas": {"lat": info_nodo["lat"], "lon": info_nodo["lon"]},
-        "timestamp_utc": pd.Timestamp.now().isoformat(),
-        "telemetria_raw": data,
-        "indices_calculados": indices
-    })
-    st.markdown('</div>', unsafe_allow_html=True)
+        # 2. Gráfico de Tendencia 24H
+        if df_hourly is not None:
+            fig_quick = go.Figure()
+            fig_quick.add_trace(go.Scatter(
+                x=df_hourly["Hora"], y=df_hourly["Temperatura (°C)"],
+                mode='lines', line=dict(shape='spline', color='#00F0FF', width=3),
+                fill='tozeroy', fillcolor='rgba(0, 240, 255, 0.08)',
+                name="Temp (°C)"
+            ))
+            fig_quick.update_layout(
+                title=dict(text="Tendencia 24H", font=dict(size=13, color="#94A3B8")),
+                template="plotly_dark", height=200,
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                margin=dict(l=10, r=10, t=30, b=10),
+                hovermode="x unified"
+            )
+            st.plotly_chart(fig_quick, use_container_width="stretch")
 
-elif "[REPORT]" in modulo_seleccionado:
-    st.markdown(f"""
-        <div class="cyber-panel" style="text-align: center; padding: 30px;">
-            <h3 style="color:#00F0FF; font-family:'Orbitron';">INFORME TÉCNICO F.U.I.S.T.E. B.U.E.N.O.</h3>
-            <p style="font-size: 0.9rem; opacity:0.8;">Descarga la ficha oficial de monitoreo de {zona_seleccionada}.</p>
-    """, unsafe_allow_html=True)
-    
-    html_reporte = generar_html_reporte_pdf(zona_seleccionada, data, indices)
-    
-    st.download_button(
-        label="📄 DESCARGAR INFORME OFICIAL (HTML/PDF)",
-        data=html_reporte,
-        file_name=f"Reporte_FUISTE_BUENO_{zona_seleccionada.replace(' ', '_')}.html",
-        mime="text/html",
-        use_container_width=True
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    # -------------------------------------------------------------------------
+    # COLUMNA DERECHA: Mapa Zonal en Vivo + Pronóstico 7 Días
+    # -------------------------------------------------------------------------
+    with col_der:
+        # 1. Mapa de Red Territorial
+        df_mapa = obtener_resumen_red_nodos()
+        if df_mapa is not None and not df_mapa.empty:
+            df_mapa["Tamaño_Nodo"] = df_mapa["Temp"].apply(lambda t: float(max(t + 20.0, 5.0)))
+            
+            fig_map = px.scatter_map(
+                df_mapa, lat="lat", lon="lon", text="Etiqueta",
+                color="Temp", size="Tamaño_Nodo", size_max=14,
+                color_continuous_scale="Plasma", zoom=3.8,
+                center={"lat": -35.0, "lon": -71.5},
+                hover_name="Ciudad",
+                hover_data={"Región": True, "Temp": ":.1f °C", "Humedad": ":.0f %", "Condicion": True, "Tamaño_Nodo": False, "lat": False, "lon": False},
+                map_style="carto-darkmatter"
+            )
+            fig_map.update_layout(
+                height=260, margin={"r":0, "t":0, "l":0, "b":0},
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            st.plotly_chart(fig_map, use_container_width="stretch")
+
+        # 2. Pronóstico semanal horizontal
+        if df_daily is not None:
+            st.markdown("<small style='color:#94A3B8; font-weight:600;'>PRONÓSTICO 7 DÍAS</small>", unsafe_allow_html=True)
+            cols_d = st.columns(min(len(df_daily), 7))
+            for i, row in df_daily.head(7).iterrows():
+                with cols_d[i]:
+                    st.markdown(f"""
+                        <div class="glass-card" style="text-align: center; padding: 8px 4px; margin-bottom: 0;">
+                            <small style="font-size: 0.7rem;">{row['Fecha'].strftime('%a')}</small>
+                            <div style="font-size:1rem; font-weight:bold; color:#38BDF8; margin: 2px 0;">{int(row['Max'])}°</div>
+                            <small style="color:#94A3B8; font-size: 0.7rem;">{int(row['Min'])}°</small>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+else:
+    st.info("Sincronizando con la red de sensores...")

@@ -1,104 +1,95 @@
 import streamlit as st
 
-def load_css(theme_mode):
-    if theme_mode == "Oscuro Cyberpunk":
-        bg_color = "#080D1A"
-        panel_bg = "#0F172A"
-        border_color = "#1E293B"
-        text_color = "#E2E8F0"
-        accent_blue = "#00F0FF"
-        accent_green = "#00FF66"
-    else:
-        bg_color = "#F8FAFC"
-        panel_bg = "#FFFFFF"
-        border_color = "#E2E8F0"
-        text_color = "#0F172A"
-        accent_blue = "#0284C7"
-        accent_green = "#16A34A"
+def aplicar_estilos_base():
+    st.markdown("""
+        <style>
+        /* Fondo general UI estilo Dark Glass OS */
+        .stApp {
+            background-color: #0B101D;
+            color: #E2E8F0;
+        }
+        
+        /* Ocultar marca de agua y menús por defecto */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        
+        /* Sidebar Personalizado */
+        section[data-testid="stSidebar"] {
+            background-color: #0F172A !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
 
-    css = f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@600;800;900&display=swap');
+        /* Banner Hero Principal */
+        .hero-card {
+            background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 50%, #06B6D4 100%);
+            border-radius: 20px;
+            padding: 24px;
+            color: white;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+            margin-bottom: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .hero-card:hover {
+            box-shadow: 0 15px 30px -5px rgba(59, 130, 246, 0.6);
+            transform: translateY(-2px);
+        }
+        .hero-temp {
+            font-size: 3.8rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+        .hero-city {
+            font-size: 1.6rem;
+            font-weight: 700;
+            opacity: 0.95;
+        }
+        
+        /* Tarjetas Glassmorphic Interactivas */
+        .glass-card {
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 12px 20px -5px rgba(56, 189, 248, 0.15);
+        }
+        
+        .metric-title {
+            font-size: 0.75rem;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+        }
+        .metric-num {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #F8FAFC;
+        }
 
-    .stApp {{
-        background-color: {bg_color};
-        color: {text_color};
-        font-family: 'JetBrains Mono', monospace;
-    }}
-
-    .cyber-panel {{
-        background: {panel_bg};
-        border: 1px solid {border_color};
-        border-left: 4px solid {accent_blue};
-        padding: 16px;
-        border-radius: 4px;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }}
-
-    .cyber-panel-green {{
-        background: {panel_bg};
-        border: 1px solid {border_color};
-        border-left: 4px solid {accent_green};
-        padding: 16px;
-        border-radius: 4px;
-        margin-bottom: 12px;
-    }}
-
-    .panel-tag {{
-        font-family: 'Orbitron', sans-serif;
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 1.5px;
-        color: {accent_blue};
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }}
-
-    .panel-tag-green {{
-        color: {accent_green};
-    }}
-
-    .metric-big {{
-        font-family: 'Orbitron', sans-serif;
-        font-size: 2.2rem;
-        font-weight: 900;
-        line-height: 1;
-        margin: 4px 0;
-    }}
-
-    .unit-label {{
-        font-size: 0.9rem;
-        font-weight: 400;
-        margin-left: 4px;
-        opacity: 0.8;
-    }}
-
-    .sub-status {{
-        font-size: 0.75rem;
-        font-weight: 700;
-        display: flex;
-        justify-content: space-between;
-        margin-top: 6px;
-    }}
-
-    .live-dot {{
-        height: 8px;
-        width: 8px;
-        background-color: {accent_green};
-        border-radius: 50%;
-        display: inline-block;
-        box-shadow: 0 0 8px {accent_green};
-        animation: pulse 1.5s infinite;
-    }}
-
-    @keyframes pulse {{
-        0% {{ transform: scale(0.95); opacity: 0.8; }}
-        50% {{ transform: scale(1.2); opacity: 1; }}
-        100% {{ transform: scale(0.95); opacity: 0.8; }}
-    }}
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
+        /* Pulsación Live Indicator */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+        .live-badge {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            background-color: #38BDF8;
+            border-radius: 50%;
+            animation: pulse-glow 2s infinite;
+            margin-right: 6px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
