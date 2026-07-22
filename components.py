@@ -17,7 +17,6 @@ def aplicar_estilos_skyform_dinamico(clima):
 
     st.markdown(f"""
         <style>
-        /* --- OCULTAR BOTÓN DE COLAPSO DEL SIDEBAR --- */
         [data-testid="stSidebarCollapseButton"],
         [data-testid="collapsedControl"],
         button[data-testid="stSidebarCollapsedControl"],
@@ -27,7 +26,6 @@ def aplicar_estilos_skyform_dinamico(clima):
             pointer-events: none !important;
         }}
 
-        /* --- ESTILOS NATIVOS DEL SIDEBAR --- */
         section[data-testid="stSidebar"] {{
             background: rgba(15, 23, 42, 0.95) !important;
             border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -233,7 +231,7 @@ def renderizar_condiciones_grid(clima):
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 1 14 16H2"/></svg>
                     <div>
                         <div class="metric-title">Viento</div>
                         <div class="metric-val">{clima.get('viento_velo')} <span style="font-size: 0.7rem;">km/h</span></div>
@@ -251,6 +249,76 @@ def renderizar_condiciones_grid(clima):
     """, unsafe_allow_html=True)
 
 
+def renderizar_modulo_lluvia_viento(clima):
+    """Renderiza el módulo de probabilidad de lluvia y ráfagas sin sangrías de markdown"""
+    prob_lluvia = clima.get('prob_lluvia', 0)
+    rafagas = clima.get('rafagas_viento', 0)
+    presion = clima.get('presion', 1013.2)
+    
+    html_content = f"""<div class="bento-card">
+<div class="metric-title" style="margin-bottom: 8px;">PRECIPITACIÓN & DINÁMICA DE VIENTO</div>
+<div style="margin-bottom: 8px;">
+<div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
+<span style="color: #94a3b8;">Probabilidad Lluvia</span>
+<span style="color: #38bdf8; font-weight: 700;">{prob_lluvia}%</span>
+</div>
+<div style="width: 100%; background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px; overflow: hidden;">
+<div style="width: {prob_lluvia}%; background: linear-gradient(90deg, #0284c7, #38bdf8); height: 100%;"></div>
+</div>
+</div>
+<div style="margin-bottom: 8px;">
+<div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
+<span style="color: #94a3b8;">Ráfagas de Viento</span>
+<span style="color: #818cf8; font-weight: 700;">{rafagas} km/h</span>
+</div>
+<div style="width: 100%; background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px; overflow: hidden;">
+<div style="width: {min(rafagas * 2, 100)}%; background: linear-gradient(90deg, #6366f1, #818cf8); height: 100%;"></div>
+</div>
+</div>
+<div>
+<div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 3px;">
+<span style="color: #94a3b8;">Presión Barométrica</span>
+<span style="color: #00ff88; font-weight: 700;">{presion} hPa</span>
+</div>
+<div style="width: 100%; background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px; overflow: hidden;">
+<div style="width: {min(max((presion - 980) * 2, 10), 100)}%; background: linear-gradient(90deg, #059669, #00ff88); height: 100%;"></div>
+</div>
+</div>
+</div>"""
+
+    st.markdown(html_content, unsafe_allow_html=True)
+
+
+def renderizar_arco_solar(clima):
+    """Renderiza el Arco Solar Parabólico SVG sin emojis ni sangrías de markdown"""
+    amanecer = clima.get('amanecer', '07:30')
+    atardecer = clima.get('atardecer', '18:30')
+    aqi = clima.get('aqi', 15)
+    pm2_5 = clima.get('pm2_5', 0.0)
+    
+    html_content = f"""<div class="bento-card">
+<div class="metric-title" style="margin-bottom: 4px;">CICLO SOLAR Y CALIDAD DEL AIRE</div>
+<div style="position: relative; width: 100%; text-align: center; padding: 2px 0;">
+<svg width="100%" height="48" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M 20 45 A 80 35 0 0 1 180 45" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+<circle cx="130" cy="20" r="5" fill="#f59e0b" filter="drop-shadow(0 0 6px #f59e0b)"/>
+<circle cx="20" cy="45" r="3" fill="#38bdf8"/>
+<circle cx="180" cy="45" r="3" fill="#818cf8"/>
+</svg>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; margin-top: -6px;">
+<span>Amanecer: <b style="color: #e2e8f0;">{amanecer}</b></span>
+<span>Atardecer: <b style="color: #e2e8f0;">{atardecer}</b></span>
+</div>
+<div style="margin-top: 6px; display: flex; justify-content: space-between; font-size: 0.72rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 4px;">
+<span>AQI: <b style="color:#00ff88;">{aqi}</b></span>
+<span>PM2.5: <b>{pm2_5} µg/m³</b></span>
+</div>
+</div>"""
+
+    st.markdown(html_content, unsafe_allow_html=True)
+
+
 def renderizar_mapa_integradom(lat, lon):
     fig = go.Figure(go.Scattermapbox(
         lat=[lat], lon=[lon],
@@ -265,7 +333,7 @@ def renderizar_mapa_integradom(lat, lon):
             zoom=10.5
         ),
         margin=dict(l=0, r=0, t=0, b=0),
-        height=250,
+        height=190,
         paper_bgcolor='rgba(0,0,0,0)'
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})

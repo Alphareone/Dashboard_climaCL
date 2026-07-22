@@ -1,179 +1,229 @@
-import requests
-import pytz
 from datetime import datetime
-
-ICON_BASE = "https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/"
-
-# Coordenadas y Regiones de Chile
-TERRITORIO_CHILE = {
-    "Arica y Parinacota": {
-        "Arica": {"lat": -18.4783, "lon": -70.3126}
-    },
-    "Tarapacá": {
-        "Iquique": {"lat": -20.2133, "lon": -70.1503}
-    },
-    "Antofagasta": {
-        "Antofagasta": {"lat": -23.6509, "lon": -70.3975},
-        "Calama": {"lat": -22.4544, "lon": -68.9292}
-    },
-    "Atacama": {
-        "Copiapó": {"lat": -27.3668, "lon": -70.3323}
-    },
-    "Coquimbo": {
-        "La Serena": {"lat": -29.9027, "lon": -71.2519},
-        "Coquimbo": {"lat": -29.9533, "lon": -71.3395}
-    },
-    "Valparaíso": {
-        "Quilpué": {"lat": -33.0486, "lon": -71.4426},
-        "Valparaíso": {"lat": -33.0472, "lon": -71.6127},
-        "Viña del Mar": {"lat": -33.0245, "lon": -71.5518},
-        "Villa Alemana": {"lat": -33.0425, "lon": -71.3736},
-        "Quillota": {"lat": -32.8833, "lon": -71.2500}
-    },
-    "Metropolitana de Santiago": {
-        "Santiago (Centro)": {"lat": -33.4489, "lon": -70.6693},
-        "Puente Alto": {"lat": -33.6117, "lon": -70.5758},
-        "Maipú": {"lat": -33.5111, "lon": -70.7581},
-        "Providencia": {"lat": -33.4314, "lon": -70.6093},
-        "Las Condes": {"lat": -33.4117, "lon": -70.5806}
-    },
-    "O'Higgins": {
-        "Rancagua": {"lat": -34.1701, "lon": -70.7407}
-    },
-    "Maule": {
-        "Talca": {"lat": -35.4264, "lon": -71.6554},
-        "Curicó": {"lat": -34.9828, "lon": -71.2394}
-    },
-    "Ñuble": {
-        "Chillán": {"lat": -36.6063, "lon": -72.1034}
-    },
-    "Bío Bío": {
-        "Concepción": {"lat": -36.8201, "lon": -73.0444},
-        "Talcahuano": {"lat": -36.7167, "lon": -73.1167},
-        "Los Ángeles": {"lat": -37.4697, "lon": -72.3528}
-    },
-    "Araucanía": {
-        "Temuco": {"lat": -38.7359, "lon": -72.5904},
-        "Pucón": {"lat": -39.2817, "lon": -71.9744}
-    },
-    "Los Ríos": {
-        "Valdivia": {"lat": -39.8142, "lon": -73.2459}
-    },
-    "Los Lagos": {
-        "Puerto Montt": {"lat": -41.4693, "lon": -72.9424},
-        "Castro": {"lat": -42.4721, "lon": -73.7732}
-    },
-    "Aysén": {
-        "Coyhaique": {"lat": -45.5712, "lon": -72.0685}
-    },
-    "Magallanes y Antártica Chilena": {
-        "Punta Arenas": {"lat": -53.1638, "lon": -70.9171}
-    }
-}
+import pandas as pd
+import requests
+import streamlit as st
 
 WMO_MAP = {
-    0: {"desc": "Despejado", "icon": "day.svg"},
-    1: {"desc": "Algo Nublado", "icon": "cloudy-day-1.svg"},
-    2: {"desc": "Parcialmente Nublado", "icon": "cloudy-day-3.svg"},
-    3: {"desc": "Nublado", "icon": "cloudy.svg"},
-    45: {"desc": "Niebla", "icon": "cloudy.svg"},
-    48: {"desc": "Niebla Escarchada", "icon": "cloudy.svg"},
-    51: {"desc": "Llovizna Ligera", "icon": "rainy-4.svg"},
-    53: {"desc": "Llovizna Moderada", "icon": "rainy-5.svg"},
-    55: {"desc": "Llovizna Densa", "icon": "rainy-6.svg"},
-    61: {"desc": "Lluvia Débil", "icon": "rainy-4.svg"},
-    63: {"desc": "Lluvia Moderada", "icon": "rainy-5.svg"},
-    65: {"desc": "Lluvia Fuerte", "icon": "rainy-6.svg"},
-    71: {"desc": "Nieve Débil", "icon": "snowy-4.svg"},
-    80: {"desc": "Chubascos Débiles", "icon": "rainy-4.svg"},
-    81: {"desc": "Chubascos Moderados", "icon": "rainy-5.svg"},
-    82: {"desc": "Chubascos Violentos", "icon": "rainy-7.svg"},
-    95: {"desc": "Tormenta Eléctrica", "icon": "thunder.svg"}
+    0: {"desc": "Cielo Despejado", "type": "sun"},
+    1: {"desc": "Principalmente Despejado", "type": "sun_cloud"},
+    2: {"desc": "Parcialmente Nublado", "type": "sun_cloud"},
+    3: {"desc": "Nublado", "type": "cloud"},
+    45: {"desc": "Niebla", "type": "fog"},
+    48: {"desc": "Niebla Escarchada", "type": "fog"},
+    51: {"desc": "Llovizna Ligera", "type": "rain_light"},
+    53: {"desc": "Llovizna Moderada", "type": "rain"},
+    55: {"desc": "Llovizna Densa", "type": "rain"},
+    61: {"desc": "Lluvia Ligera", "type": "rain_light"},
+    63: {"desc": "Lluvia Moderada", "type": "rain"},
+    65: {"desc": "Lluvia Fuerte", "type": "rain_heavy"},
+    71: {"desc": "Nieve Ligera", "type": "snow"},
+    73: {"desc": "Nieve Moderada", "type": "snow"},
+    75: {"desc": "Nieve Fuerte", "type": "snow"},
+    80: {"desc": "Chubascos Leves", "type": "rain_light"},
+    81: {"desc": "Chubascos Moderados", "type": "rain"},
+    82: {"desc": "Chubascos Violentos", "type": "storm"},
+    95: {"desc": "Tormenta Eléctrica", "type": "storm"},
+    96: {"desc": "Tormenta con Granizo Leve", "type": "storm"},
+    99: {"desc": "Tormenta con Granizo Fuerte", "type": "storm"},
 }
 
-def obtener_telemetria_completa(lat: float, lon: float, comuna: str, region: str):
+TERRITORIO_CHILE = {
+    "Arica y Parinacota": {
+        "Arica": (-18.4783, -70.3126),
+        "Putre": (-18.1964, -69.5592),
+    },
+    "Tarapacá": {
+        "Iquique": (-20.2133, -70.1503),
+        "Alto Hospicio": (-20.2689, -70.1009),
+        "Pozo Almonte": (-20.2597, -69.7862),
+    },
+    "Antofagasta": {
+        "Antofagasta": (-23.6509, -70.3975),
+        "Calama": (-22.4544, -68.9294),
+        "Tocopilla": (-22.0917, -70.1978),
+        "San Pedro de Atacama": (-22.9087, -68.1997),
+        "Mejillones": (-23.1036, -70.4503),
+    },
+    "Atacama": {
+        "Copiapó": (-27.3668, -70.3323),
+        "Vallenar": (-28.5752, -70.7583),
+        "Caldera": (-27.0673, -70.8258),
+        "Chañaral": (-26.3478, -70.6222),
+    },
+    "Coquimbo": {
+        "La Serena": (-29.9027, -71.2520),
+        "Coquimbo": (-29.9533, -71.3436),
+        "Ovalle": (-30.5983, -71.2003),
+        "Illapel": (-31.6308, -71.1653),
+        "Vicuña": (-30.0319, -70.7081),
+    },
+    "Valparaíso": {
+        "Valparaíso": (-33.0472, -71.6127),
+        "Viña del Mar": (-33.0245, -71.5518),
+        "Quilpué": (-33.0489, -71.4429),
+        "Villa Alemana": (-33.0422, -71.3736),
+        "Quillota": (-32.8803, -71.2472),
+        "San Antonio": (-33.5938, -71.6078),
+        "Los Andes": (-32.8336, -70.5983),
+        "San Felipe": (-32.7508, -70.7258),
+    },
+    "Región Metropolitana": {
+        "Santiago": (-33.4489, -70.6693),
+        "Puente Alto": (-33.6117, -70.5758),
+        "Maipú": (-33.5111, -70.7581),
+        "Providencia": (-33.4314, -70.6092),
+        "Las Condes": (-33.4117, -70.5694),
+        "San Bernardo": (-33.5925, -70.7042),
+        "Melipilla": (-33.6853, -71.2164),
+        "Talagante": (-33.6644, -70.9272),
+        "Colina": (-33.2031, -70.6750),
+    },
+    "O'Higgins": {
+        "Rancagua": (-34.1701, -70.7444),
+        "Machalí": (-34.1814, -70.6508),
+        "San Fernando": (-34.5839, -70.9889),
+        "Pichilemu": (-34.3869, -72.0042),
+        "Rengo": (-34.4069, -70.8586),
+    },
+    "Maule": {
+        "Talca": (-35.4264, -71.6554),
+        "Curicó": (-34.9828, -71.2394),
+        "Linares": (-35.8467, -71.5931),
+        "Constitución": (-35.3333, -72.4167),
+        "Cauquenes": (-35.9672, -72.3158),
+    },
+    "Ñuble": {
+        "Chillán": (-36.6066, -72.1034),
+        "San Carlos": (-36.4244, -71.9583),
+        "Bulnes": (-36.7422, -72.2986),
+    },
+    "Biobío": {
+        "Concepción": (-36.8270, -73.0503),
+        "Talcahuano": (-36.7167, -73.1167),
+        "Los Ángeles": (-37.4697, -72.3536),
+        "San Pedro de la Paz": (-36.8406, -73.1039),
+        "Coronel": (-37.0167, -73.1333),
+        "Chillán Viejo": (-36.6231, -72.1311),
+    },
+    "Araucanía": {
+        "Temuco": (-38.7359, -72.5904),
+        "Padre Las Casas": (-38.7589, -72.5914),
+        "Villarrica": (-39.2833, -72.2333),
+        "Pucón": (-39.2817, -71.9750),
+        "Angol": (-37.7964, -72.7158),
+    },
+    "Los Ríos": {
+        "Valdivia": (-39.8142, -73.2459),
+        "La Unión": (-40.2933, -73.0817),
+        "Río Bueno": (-40.3183, -72.9567),
+        "Panguipulli": (-39.6433, -72.3325),
+    },
+    "Los Lagos": {
+        "Puerto Montt": (-41.4693, -72.9424),
+        "Osorno": (-40.5739, -73.1331),
+        "Puerto Varas": (-41.3194, -72.9853),
+        "Castro": (-42.4825, -73.7636),
+        "Ancud": (-41.8683, -73.8239),
+    },
+    "Aysén": {
+        "Coyhaique": (-45.5752, -72.0662),
+        "Puerto Aysén": (-45.4056, -72.6931),
+        "Chile Chico": (-46.5408, -71.7258),
+    },
+    "Magallanes": {
+        "Punta Arenas": (-53.1638, -70.9171),
+        "Puerto Natales": (-51.7269, -72.5061),
+        "Porvenir": (-53.2958, -70.3683),
+    },
+}
+
+
+@st.cache_data(ttl=1800)
+def obtener_telemetria_completa(lat, lon, ciudad, region):
+    url_weather = (
+        f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+        "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,"
+        "precipitation,rain,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+        "&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,"
+        "precipitation_probability,precipitation,rain,weather_code,surface_pressure,visibility,"
+        "wind_speed_10m,wind_direction_10m,uv_index"
+        "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum"
+        "&timezone=auto"
+    )
+
+    url_air_quality = (
+        f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}"
+        "&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi"
+        "&timezone=auto"
+    )
+
     try:
-        url_meteo = "https://api.open-meteo.com/v1/forecast"
-        params_meteo = {
-            "latitude": lat,
-            "longitude": lon,
-            "current": [
-                "temperature_2m", "relative_humidity_2m", "apparent_temperature",
-                "is_day", "precipitation", "weather_code", "surface_pressure",
-                "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "uv_index", "visibility"
-            ],
-            "hourly": ["temperature_2m", "precipitation_probability", "wind_speed_10m"],
-            "daily": ["sunrise", "sunset", "temperature_2m_max", "temperature_2m_min", "weather_code"],
-            "timezone": "America/Santiago"
-        }
-        res_meteo = requests.get(url_meteo, params=params_meteo, timeout=10).json()
+        res_w = requests.get(url_weather, timeout=10).json()
+        res_aq = requests.get(url_air_quality, timeout=10).json()
 
-        url_air = "https://air-quality-api.open-meteo.com/v1/air-quality"
-        params_air = {
-            "latitude": lat,
-            "longitude": lon,
-            "current": ["european_aqi", "pm10", "pm2_5"],
-            "timezone": "America/Santiago"
-        }
-        res_air = requests.get(url_air, params=params_air, timeout=10).json()
+        current = res_w.get("current", {})
+        daily = res_w.get("daily", {})
+        hourly = res_w.get("hourly", {})
+        aq_current = res_aq.get("current", {})
 
-        curr = res_meteo.get("current", {})
-        daily = res_meteo.get("daily", {})
-        hourly = res_meteo.get("hourly", {})
-        curr_air = res_air.get("current", {})
+        wmo_code = current.get("weather_code", 0)
+        wmo_info = WMO_MAP.get(wmo_code, {"desc": "Desconocido", "type": "sun"})
 
-        es_noche = curr.get("is_day", 1) == 0
-        wmo_info = WMO_MAP.get(curr.get("weather_code", 0), {"desc": "Desconocido", "icon": "cloudy.svg"})
-        
-        nombre_icono = wmo_info["icon"]
-        if es_noche and "day" in nombre_icono:
-            nombre_icono = nombre_icono.replace("day", "night")
+        df_hourly = pd.DataFrame(hourly)
+        if not df_hourly.empty:
+            df_hourly["time"] = pd.to_datetime(df_hourly["time"])
 
-        timezone_cl = pytz.timezone("America/Santiago")
-        ahora_cl = datetime.now(timezone_cl)
-        dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        df_daily = pd.DataFrame(daily)
+        if not df_daily.empty:
+            df_daily["time"] = pd.to_datetime(df_daily["time"])
 
-        daily_forecast = []
-        if "time" in daily:
-            for i in range(min(7, len(daily["time"]))):
-                f_date = datetime.strptime(daily["time"][i], "%Y-%m-%d")
-                w_code = daily["weather_code"][i] if "weather_code" in daily else 0
-                w_icon = WMO_MAP.get(w_code, {"icon": "day.svg"})["icon"]
-                daily_forecast.append({
-                    "day_name": dias_semana[f_date.weekday()][:3],
-                    "max_temp": round(daily["temperature_2m_max"][i]),
-                    "min_temp": round(daily["temperature_2m_min"][i]),
-                    "icon_url": f"{ICON_BASE}{w_icon}"
-                })
+        vis_meters = hourly.get("visibility", [10000])[0] if hourly.get("visibility") else 10000
+        vis_km = round(vis_meters / 1000.0, 1)
+
+        prob_lluvia = hourly.get("precipitation_probability", [0])[0] if hourly.get("precipitation_probability") else 0
 
         return {
-            "comuna": comuna,
+            "ciudad": ciudad,
             "region": region,
             "lat": lat,
             "lon": lon,
-            "dia_nombre": dias_semana[ahora_cl.weekday()],
-            "temperatura": round(curr.get("temperature_2m", 0.0) or 0.0, 1),
-            "sensacion": round(curr.get("apparent_temperature", 0.0) or 0.0, 1),
-            "humedad": curr.get("relative_humidity_2m", 0) or 0,
-            "presion": round(curr.get("surface_pressure", 0.0) or 0.0, 1),
-            "precipitacion": curr.get("precipitation", 0.0) or 0.0,
-            "visibilidad": round((curr.get("visibility", 10000) or 10000) / 1000, 1),
-            "viento_velo": round(curr.get("wind_speed_10m", 0.0) or 0.0, 1),
-            "viento_dir": curr.get("wind_direction_10m", 0) or 0,
-            "es_noche": es_noche,
-            "uv_index": curr.get("uv_index", 0.0) or 0.0,
-            "condicion": wmo_info["desc"],
-            "icono_url": f"{ICON_BASE}{nombre_icono}",
-            "fecha_actual": ahora_cl.strftime("%d/%m/%Y"),
-            "amanecer": daily.get("sunrise", ["--T--"])[0].split("T")[-1] if daily.get("sunrise") else "--:--",
-            "atardecer": daily.get("sunset", ["--T--"])[0].split("T")[-1] if daily.get("sunset") else "--:--",
-            "temp_max": daily.get("temperature_2m_max", [0])[0] if daily.get("temperature_2m_max") else 0,
-            "temp_min": daily.get("temperature_2m_min", [0])[0] if daily.get("temperature_2m_min") else 0,
-            "aqi": curr_air.get("european_aqi", 0) or 0,
-            "pm2_5": curr_air.get("pm2_5", 0.0) or 0.0,
-            "hourly": hourly,
-            "daily_forecast": daily_forecast
+            "actual": {
+                "temperatura": current.get("temperature_2m"),
+                "sensacion": current.get("apparent_temperature"),
+                "humedad": current.get("relative_humidity_2m"),
+                "presion": current.get("surface_pressure"),
+                "viento_velocidad": current.get("wind_speed_10m"),
+                "viento_direccion": current.get("wind_direction_10m"),
+                "viento_rafagas": current.get("wind_gusts_10m"),
+                "precipitacion": current.get("precipitation"),
+                "probabilidad_lluvia": prob_lluvia,
+                "visibilidad_km": vis_km,
+                "es_dia": current.get("is_day", 1),
+                "wmo_code": wmo_code,
+                "condicion": wmo_info["desc"],
+                "tipo_icono": wmo_info["type"],
+            },
+            "diario": {
+                "temp_max": daily.get("temperature_2m_max", [None])[0],
+                "temp_min": daily.get("temperature_2m_min", [None])[0],
+                "salida_sol": daily.get("sunrise", [""])[0],
+                "puesta_sol": daily.get("sunset", [""])[0],
+                "uv_max": daily.get("uv_index_max", [None])[0],
+                "precipitacion_total": daily.get("precipitation_sum", [None])[0],
+            },
+            "calidad_aire": {
+                "aqi": aq_current.get("us_aqi"),
+                "pm2_5": aq_current.get("pm2_5"),
+                "pm10": aq_current.get("pm10"),
+                "co": aq_current.get("carbon_monoxide"),
+                "no2": aq_current.get("nitrogen_dioxide"),
+                "so2": aq_current.get("sulphur_dioxide"),
+                "o3": aq_current.get("ozone"),
+            },
+            "df_hourly": df_hourly,
+            "df_daily": df_daily,
+            "timestamp": datetime.now().strftime("%d/%m/%Y"),
         }
     except Exception as e:
-        print(f"Error procesando telemetría: {e}")
+        st.error(f"Error al obtener datos de telemetría: {e}")
         return None
