@@ -1,119 +1,285 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
-from telemetry import traducir_codigo_clima
 
-# BIBLIOTECA DE ÍCONOS VECTORIALES INTERACTIVOS SVG (SIN EMOJIS)
-ICONS_SVG = {
-    "location": '<svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.5"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>',
-    "sol": '<svg class="svg-icon anim-spin" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#FACC15" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
-    "sol_nube": '<svg class="svg-icon anim-float" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9 h1.79a4.5 4.5 0 1 1 0 9z"/><path d="M12 2v2M4.22 4.22l1.42 1.42M1 12h2" stroke="#FACC15"/></svg>',
-    "nube": '<svg class="svg-icon anim-float" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9 h1.79a4.5 4.5 0 1 1 0 9z"/></svg>',
-    "nubes": '<svg class="svg-icon anim-float" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9 h1.79a4.5 4.5 0 1 1 0 9z"/><path d="M22 10a3 3 0 0 0-5.83-1" stroke="#475569"/></svg>',
-    "lluvia": '<svg class="svg-icon anim-rain" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><path d="M16 13v6M8 13v6M12 15v6M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>',
-    "lluvia_fuerte": '<svg class="svg-icon anim-rain" width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5"><path d="M16 13v8M8 13v8M12 14v8M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>',
-    "viento": '<svg class="svg-icon anim-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>',
-    "humedad": '<svg class="svg-icon anim-pulse" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>',
-    "presion": '<svg class="svg-icon anim-pulse" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FACC15" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    "uv": '<svg class="svg-icon anim-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>'
-}
-
-def renderizar_tarjeta_clima_movil(curr, ciudad, fecha_str):
-    temp_act = int(curr.get("temperature_2m", 0))
-    temp_sens = int(curr.get("apparent_temperature", temp_act))
-    viento = int(curr.get("wind_speed_10m", 0))
-    uv = curr.get("uv_index", 0)
-    w_code = curr.get("weather_code", 0)
+def aplicar_estilos_skyform_dinamico(clima):
+    es_noche = clima.get('es_noche', False)
+    cond = clima.get('condicion', '').lower()
     
-    estado_texto, llave_icono = traducir_codigo_clima(w_code)
-    icono_svg = ICONS_SVG.get(llave_icono, ICONS_SVG["sol_nube"])
+    if es_noche:
+        bg_url = "https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?q=80&w=1920"
+    elif "lluvia" in cond or "llovizna" in cond:
+        bg_url = "https://images.unsplash.com/photo-1519692933481-e162a57d6721?q=80&w=1920"
+    elif "nublado" in cond:
+        bg_url = "https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1920"
+    else:
+        bg_url = "https://images.unsplash.com/photo-1601297183305-6df142704ea2?q=80&w=1920"
 
-    st.markdown(f'''
-        <div class="ui-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <span class="pill-badge">{ICONS_SVG["location"]} {ciudad.upper()}, CHILE</span>
-                <span style="font-size: 0.8rem; color: #64748B; font-weight: 600;">{fecha_str}</span>
-            </div>
-            <div style="font-size: 0.72rem; color: #38BDF8; font-weight: 700; letter-spacing: 0.08em;">ESTADO OFICIAL EN TIEMPO REAL</div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0;">
+    st.markdown(f"""
+        <style>
+        /* --- OCULTAR BOTÓN DE COLAPSO DEL SIDEBAR --- */
+        [data-testid="stSidebarCollapseButton"],
+        [data-testid="collapsedControl"],
+        button[data-testid="stSidebarCollapsedControl"],
+        section[data-testid="stSidebar"] button[aria-label="Close"] {{
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }}
+
+        /* --- ESTILOS NATIVOS DEL SIDEBAR --- */
+        section[data-testid="stSidebar"] {{
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+            backdrop-filter: blur(16px) !important;
+        }}
+
+        .main .block-container {{
+            padding-top: 0.8rem !important;
+            padding-bottom: 0rem !important;
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+        }}
+        
+        header, footer, #MainMenu {{ visibility: hidden; }}
+        
+        .stApp {{
+            background: linear-gradient(rgba(11, 19, 37, 0.78), rgba(11, 19, 37, 0.88)), url('{bg_url}') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-attachment: fixed !important;
+            color: #e2e8f0;
+        }}
+        
+        .bento-card {{
+            background: rgba(19, 28, 49, 0.48) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 14px;
+            padding: 0.7rem 0.9rem !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-bottom: 0.4rem !important;
+        }}
+        
+        .hero-card {{
+            background: {"linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.75))" if es_noche else "linear-gradient(135deg, rgba(2, 132, 199, 0.8), rgba(59, 130, 246, 0.7))"} !important;
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            padding: 0.8rem 1.1rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }}
+        
+        .hero-temp {{
+            font-size: 2.7rem !important;
+            font-weight: 800;
+            line-height: 1;
+        }}
+
+        .metric-title {{
+            font-size: 0.68rem !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 700;
+        }}
+
+        .metric-val {{
+            font-size: 1.05rem !important;
+            font-weight: 700;
+            color: #ffffff;
+        }}
+
+        .daily-box {{
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 0.35rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+        }}
+
+        @keyframes spin {{
+            from {{ transform: rotate(0deg); }}
+            to {{ transform: rotate(360deg); }}
+        }}
+
+        .spin-slow {{
+            animation: spin 15s linear infinite;
+            filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.6));
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
+
+def renderizer_reloj_tiempo_real():
+    clock_html = """
+    <div style="
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 12px;
+        padding: 5px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #38bdf8;
+        font-family: monospace;
+        font-size: 0.92rem;
+        font-weight: 700;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+        width: fit-content;
+        margin-left: auto;
+    ">
+        <span style="
+            height: 8px;
+            width: 8px;
+            background-color: #00ff88;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #00ff88;
+        "></span>
+        <span id="liveClock">--:--:--</span>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const options = { 
+                timeZone: 'America/Santiago', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                hour12: false 
+            };
+            const timeStr = now.toLocaleTimeString('es-CL', options);
+            const el = document.getElementById('liveClock');
+            if (el) {
+                el.innerText = timeStr;
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+    """
+    components.html(clock_html, height=40)
+
+
+def renderizar_hero_card(clima):
+    st.markdown(f"""
+        <div class="hero-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div class="hero-temp-large">{temp_act}°C</div>
-                    <div class="hero-desc">{estado_texto}</div>
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 700;">AHORA</span>
+                    <h2 style="margin: 4px 0 0 0; font-size: 1.3rem;">{clima.get('comuna')}</h2>
+                    <p style="margin: 0; font-size: 0.8rem; opacity: 0.85;">{clima.get('condicion')}</p>
                 </div>
-                <div>{icono_svg}</div>
+                <img src="{clima.get('icono_url')}" style="width: 52px; height: 52px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));">
             </div>
-            <div class="hero-submetrics">
-                <span>Sensación: <b>{temp_sens}°C</b></span>
-                <span>Viento: <b>{viento} km/h</b></span>
-                <span>UV Index: <b>{uv}</b></span>
+            <div style="margin-top: 6px; display: flex; align-items: baseline; gap: 12px;">
+                <span class="hero-temp">{clima.get('temperatura')}°</span>
+                <span style="font-size: 0.85rem; opacity: 0.9;">Máx: {clima.get('temp_max')}° / Mín: {clima.get('temp_min')}°</span>
             </div>
         </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-def renderizar_curva_hourly_outlook(hourly_data):
-    horas = [pd.to_datetime(t).strftime('%H:00') for t in hourly_data["time"][:12]]
-    temps = hourly_data["temperature_2m"][:12]
-    
+
+def renderizar_grafico_tendencia(clima):
+    hourly = clima.get("hourly", {})
+    if not hourly or "temperature_2m" not in hourly:
+        return
+
+    horas = [h.split("T")[-1] for h in hourly.get("time", [])[:10]]
+    temps = hourly.get("temperature_2m", [])[:10]
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=horas, y=temps,
-        mode='lines+markers+text',
-        text=[f"{int(t)}°" for t in temps],
-        textposition="top center",
-        line=dict(color='#38BDF8', width=3, shape='spline'),
-        marker=dict(size=6, color='#60A5FA'),
+        mode='lines+markers',
+        line=dict(color='#38bdf8', width=2.5, shape='spline'),
+        marker=dict(size=5, color='#00d2ff'),
         fill='tozeroy',
         fillcolor='rgba(56, 189, 248, 0.12)'
     ))
+
     fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=0, r=0, t=25, b=0),
-        xaxis=dict(showgrid=False, color="#64748B", tickfont=dict(size=10)),
-        yaxis=dict(showgrid=False, showticklabels=False), height=160
+        margin=dict(l=5, r=5, t=10, b=5),
+        height=100,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(color="#94a3b8", size=9)),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False, tickfont=dict(color="#94a3b8", size=9))
     )
-    return fig
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-def renderizar_grid_metricas(curr):
-    col1, col2, col3 = st.columns(3)
-    hum = curr.get("relative_humidity_2m", "--")
-    viento = curr.get("wind_speed_10m", "--")
-    presion = int(curr.get("surface_pressure", 1013))
-    
-    with col1:
-        st.markdown(f'''
-            <div class="ui-card" style="padding: 14px; text-align: center;">
-                <div style="margin-bottom: 4px;">{ICONS_SVG["humedad"]}</div>
-                <div style="font-size: 0.68rem; color: #64748B; font-weight: 700;">HUMEDAD</div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: #FFF; margin-top: 2px;">{hum}%</div>
-            </div>
-        ''', unsafe_allow_html=True)
-        
-    with col2:
-        st.markdown(f'''
-            <div class="ui-card" style="padding: 14px; text-align: center;">
-                <div style="margin-bottom: 4px;">{ICONS_SVG["viento"]}</div>
-                <div style="font-size: 0.68rem; color: #64748B; font-weight: 700;">FUERZA VIENTO</div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: #FFF; margin-top: 2px;">{viento} <small style="font-size:0.65rem">km/h</small></div>
-            </div>
-        ''', unsafe_allow_html=True)
 
-    with col3:
-        st.markdown(f'''
-            <div class="ui-card" style="padding: 14px; text-align: center;">
-                <div style="margin-bottom: 4px;">{ICONS_SVG["presion"]}</div>
-                <div style="font-size: 0.68rem; color: #64748B; font-weight: 700;">PRESIÓN</div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: #FFF; margin-top: 2px;">{presion} <small style="font-size:0.65rem">hPa</small></div>
+def renderizar_condiciones_grid(clima):
+    st.markdown(f"""
+        <div class="bento-card">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+                    <div>
+                        <div class="metric-title">Humedad</div>
+                        <div class="metric-val">{clima.get('humedad')}%</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-slow"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+                    <div>
+                        <div class="metric-title">Índice UV</div>
+                        <div class="metric-val">{clima.get('uv_index')}</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+                    <div>
+                        <div class="metric-title">Viento</div>
+                        <div class="metric-val">{clima.get('viento_velo')} <span style="font-size: 0.7rem;">km/h</span></div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <div>
+                        <div class="metric-title">Visibilidad</div>
+                        <div class="metric-val">{clima.get('visibilidad')} <span style="font-size: 0.7rem;">km</span></div>
+                    </div>
+                </div>
             </div>
-        ''', unsafe_allow_html=True)
+        </div>
+    """, unsafe_allow_html=True)
 
-def renderizar_radar_map(lat, lon):
-    df = pd.DataFrame([{"lat": lat, "lon": lon, "size": 20}])
-    fig = px.scatter_map(
-        df, lat="lat", lon="lon", size="size", zoom=7, center={"lat": lat, "lon": lon}
-    )
+
+def renderizar_mapa_integradom(lat, lon):
+    fig = go.Figure(go.Scattermapbox(
+        lat=[lat], lon=[lon],
+        mode='markers+text',
+        marker=dict(size=14, color='#00d2ff'),
+        text=["Estación Telemetría"], textposition="top center"
+    ))
     fig.update_layout(
-        map_style="carto-darkmatter", margin={"r":0,"t":0,"l":0,"b":0},
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=320
+        mapbox=dict(
+            style="carto-darkmatter",
+            center=dict(lat=lat, lon=lon),
+            zoom=10.5
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=250,
+        paper_bgcolor='rgba(0,0,0,0)'
     )
-    return fig
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+
+def renderizar_pronostico_7dias(clima):
+    cols = st.columns(len(clima.get("daily_forecast", [])))
+    for idx, day in enumerate(clima.get("daily_forecast", [])):
+        with cols[idx]:
+            st.markdown(f"""
+                <div class="daily-box">
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">{day['day_name']}</div>
+                    <img src="{day['icon_url']}" style="width: 26px; height: 26px; margin: 2px 0;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #ffffff;">{day['max_temp']}°</div>
+                    <div style="font-size: 0.7rem; color: #64748b;">{day['min_temp']}°</div>
+                </div>
+            """, unsafe_allow_html=True)
