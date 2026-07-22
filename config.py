@@ -3,30 +3,39 @@ import streamlit as st
 def aplicar_estilos_base():
     st.markdown("""
         <style>
-        /* Fondo ambiental dinámico */
-        .stApp {
-            background: radial-gradient(circle at 50% 50%, #1E293B 0%, #0F172A 50%, #0B101D 100%);
-            background-size: 200% 200%;
-            animation: waterGlow 12s ease-in-out infinite alternate;
+        /* Fondo animado ambiental dinámico de alto rendimiento */
+        [data-testid="stAppViewContainer"] {
+            background: linear-gradient(-45deg, #0B101D, #0F172A, #1E293B, #0F172A);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             color: #E2E8F0;
         }
 
-        @keyframes waterGlow {
+        @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
 
-        /* Ocultar UI nativa sobrante */
+        /* Ocultar menú de 3 puntos y footer nativos */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
-        header {visibility: hidden;}
+
+        /* Botón para abrir/cerrar barra lateral siempre visible */
+        button[data-testid="stSidebarCollapseButton"],
+        button[data-testid="baseButton-header"] {
+            visibility: visible !important;
+            color: #38BDF8 !important;
+            background-color: rgba(15, 23, 42, 0.8) !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
 
         /* Sidebar Glassmorphic */
         section[data-testid="stSidebar"] {
             background-color: rgba(15, 23, 42, 0.85) !important;
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         /* Tarjeta Principal Hero */
@@ -44,7 +53,7 @@ def aplicar_estilos_base():
 
         /* Tarjetas Glassmorphic */
         .glass-card {
-            background: rgba(17, 24, 39, 0.8);
+            background: rgba(17, 24, 39, 0.75);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
@@ -62,41 +71,19 @@ def aplicar_estilos_base():
         .metric-title { font-size: 0.75rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; display: flex; align-items: center; gap: 6px; }
         .metric-num { font-size: 1.6rem; font-weight: 700; color: #F8FAFC; margin-top: 4px; }
 
-        /* EFECTOS Y ANIMACIONES PARA ÍCONOS SVG */
-        .icon-svg {
-            display: inline-block;
-            vertical-align: middle;
-            transition: transform 0.3s ease;
-        }
-        
-        /* Animación Flotante (Nubes/UV) */
-        .icon-float {
-            animation: floatAnim 3s ease-in-out infinite alternate;
-        }
-        @keyframes floatAnim {
-            0% { transform: translateY(0px); }
-            100% { transform: translateY(-4px); }
-        }
-
-        /* Animación Giratoria (Viento/Cargando) */
-        .icon-spin {
-            animation: spinAnim 8s linear infinite;
-        }
-        @keyframes spinAnim {
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Animación Pulso (Peligro/Alertas) */
-        .icon-pulse {
-            animation: pulseAnim 1.5s ease-in-out infinite;
-        }
+        /* EFECTOS Y ANIMACIONES VECTORIALES */
+        .icon-svg { display: inline-block; vertical-align: middle; transition: transform 0.3s ease; }
+        .icon-float { animation: floatAnim 3s ease-in-out infinite alternate; }
+        @keyframes floatAnim { 0% { transform: translateY(0px); } 100% { transform: translateY(-4px); } }
+        .icon-spin { animation: spinAnim 8s linear infinite; }
+        @keyframes spinAnim { 100% { transform: rotate(360deg); } }
+        .icon-pulse { animation: pulseAnim 1.5s ease-in-out infinite; }
         @keyframes pulseAnim {
             0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.5)); }
             50% { transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9)); }
             100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.5)); }
         }
 
-        /* Indicador en Vivo */
         .live-badge {
             display: inline-block;
             width: 9px;

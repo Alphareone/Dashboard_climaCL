@@ -1,9 +1,10 @@
 import requests
+import pandas as pd
 
 def obtener_datos_clima(lat, lon):
     """
-    Obtiene telemetría avanzada de Open-Meteo incluyendo variables
-    ciudadanas, agrícolas y de viento.
+    Obtiene telemetría completa de Open-Meteo para monitoreo en tiempo real,
+    curva por horas y pronóstico extendido a 7 días.
     """
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
@@ -14,8 +15,12 @@ def obtener_datos_clima(lat, lon):
             "precipitation", "weather_code", "wind_speed_10m", "wind_direction_10m",
             "uv_index", "et0_fao_evapotranspiration"
         ],
-        "hourly": ["temperature_2m", "relative_humidity_2m", "precipitation_probability", "uv_index", "wind_speed_10m"],
-        "daily": ["temperature_2m_max", "temperature_2m_min", "uv_index_max", "et0_fao_evapotranspiration"],
+        "hourly": [
+            "temperature_2m", "precipitation_probability", "precipitation", "wind_speed_10m"
+        ],
+        "daily": [
+            "weather_code", "temperature_2m_max", "temperature_2m_min", "precipitation_probability_max"
+        ],
         "timezone": "auto"
     }
     try:
@@ -26,9 +31,9 @@ def obtener_datos_clima(lat, lon):
         print(f"Error cargando telemetría: {e}")
         return None
 
-def generar_alertas_inteligentes(datos_clima):
+def generar_alertas_inteligentes(datos_clima, ciudad):
     """
-    Simulador de IA / Machine Learning que detecta anomalías y emite alertas.
+    Genera banners de alerta de riesgo extremo al estilo Google Weather.
     """
     if not datos_clima or "current" not in datos_clima:
         return []
@@ -36,23 +41,28 @@ def generar_alertas_inteligentes(datos_clima):
     curr = datos_clima["current"]
     alertas = []
 
-    # Detección de Viento
+    # Alerta de Riesgo de Inundación / Lluvia Fuerte
+    if curr.get("precipitation", 0) > 5 or datos_clima.get("hourly", {}).get("precipitation", [0])[0] > 5:
+        alertas.append({
+            "titulo": f"Riesgo de inundación repentina o anegamiento en {ciudad}",
+            "msg": "Se registran/esperan lluvias de fuerte intensidad. Las condiciones locales pueden variar.",
+            "tipo": "error"
+        })
+    
+    # Alerta de Viento Fuerte
     if curr.get("wind_speed_10m", 0) > 35:
-        alertas.append({"nivel": "warning", "msg": "⚠️ **Ráfagas Fuertes:** Vientos superiores a 35 km/h detectados."})
-    
-    # Detección de Radiación UV
+        alertas.append({
+            "titulo": f"Alerta por Ráfagas de Viento en {ciudad}",
+            "msg": "Vientos superiores a 35 km/h detectados. Precaución con caída de ramas o cortes de suministro.",
+            "tipo": "warning"
+        })
+
+    # Alerta UV Extremo
     if curr.get("uv_index", 0) >= 8:
-        alertas.append({"nivel": "error", "msg": "🚨 **Peligro UV:** Índice UV extremadamente alto. Proteja su piel."})
-    
-    # Detección de Riesgo de Helada
-    if curr.get("temperature_2m", 10) <= 3:
-        alertas.append({"nivel": "info", "msg": "❄️ **Alerta Agrícola:** Posibles heladas en las próximas horas."})
-
-    # Detección de Calentamiento / Ola de calor
-    if curr.get("temperature_2m", 0) >= 30:
-        alertas.append({"nivel": "warning", "msg": "🔥 **Ola de Calor:** Temperatura por encima del promedio confortable."})
-
-    if not alertas:
-        alertas.append({"nivel": "success", "msg": "✅ **Condiciones Estables:** No se detectan anomalías meteorológicas de riesgo."})
+        alertas.append({
+            "titulo": f"Alerta de Radiación UV Extrema",
+            "msg": "Nivel de radiación solar peligroso. Se recomienda evitar exposición prolongada.",
+            "tipo": "warning"
+        })
 
     return alertas
