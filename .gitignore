@@ -1,6 +1,25 @@
-__pycache__/
-*.pyc
-.cache.sqlite
-.streamlit/
-.venv/
+# Entorno virtual de Python
 env/
+venv/
+.venv/
+ENV/
+
+# Archivos compilados y cachés de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configuración y caché de Streamlit
+.streamlit/
+!.streamlit/config.toml
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Configuración de editores (VS Code, PyCharm)
+.vscode/
+.idea/
+
+# Variables de entorno y llaves de API (si llegas a usar un .env)
+.env
