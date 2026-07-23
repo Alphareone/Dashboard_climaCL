@@ -39,6 +39,23 @@ def generar_reloj_javascript():
     components.html(html_reloj, height=40)
 
 
+def mapear_wmo_a_tipo_icono(wmo_code):
+    """Mapea códigos meteorológicos WMO a las claves SVG de íconos disponibles."""
+    code = int(wmo_code) if pd.notnull(wmo_code) else 0
+    if code in [0, 1]:
+        return "sun"
+    elif code in [2]:
+        return "sun_cloud"
+    elif code in [3, 45, 48]:
+        return "cloud"
+    elif code in [51, 53, 55, 61, 63, 65, 80, 81]:
+        return "rain"
+    elif code in [82, 95, 96, 99]:
+        return "rain"
+    else:
+        return "sun_cloud"
+
+
 def generar_svg_icono(tipo, size=48):
     styles = """<style>
     @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -224,12 +241,17 @@ def render_skyform(datos):
                 nombre_dia = dias_nombre[fecha_dt.weekday()]
                 max_t = round(row['temperature_2m_max'])
                 min_t = round(row['temperature_2m_min'])
+                
+                # Obtener el código de clima diario o usar por defecto
+                wmo_dia = row.get('weather_code', 0) if 'weather_code' in row else 0
+                tipo_icono_dia = mapear_wmo_a_tipo_icono(wmo_dia)
+                svg_icono_dia = generar_svg_icono(tipo_icono_dia, size=28)
 
                 with col:
                     st.markdown(
                         f'<div class="glass-card" style="text-align: center; padding: 12px 6px;">'
                         f'<div style="font-size: 0.8rem; font-weight: 600; color: #9ca3af;">{nombre_dia}</div>'
-                        f'<div style="margin: 8px 0;">{generar_svg_icono("sun_cloud", size=28)}</div>'
+                        f'<div style="margin: 8px 0;">{svg_icono_dia}</div>'
                         f'<div style="font-weight: 700; font-size: 1rem; color: white;">{max_t}°</div>'
                         f'<div style="font-size: 0.75rem; color: #64748b;">{min_t}°</div>'
                         f'</div>',
