@@ -402,6 +402,11 @@ def render_skyform(datos):
                 max_t = round(row['temperature_2m_max'])
                 min_t = round(row['temperature_2m_min'])
 
+                # Extraer el código WMO de cada día dinámicamente
+                wmo_code = row.get('weather_code', row.get('weathercode', 0))
+                tipo_icono_dia = mapear_wmo_a_tipo_icono(wmo_code)
+                svg_icono_dia = generar_svg_icono(tipo_icono_dia, size=28)
+
                 with col:
                     st.markdown(
                         f'<div class="glass-card" style="text-align: center; padding: 12px 6px;">'
