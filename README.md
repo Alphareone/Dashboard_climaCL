@@ -1,6 +1,4 @@
-Aquí tienes el archivo **`README.md` completo y unificado** en un solo bloque de código de Markdown, listo para copiar y pegar:
-
-```markdown
+markdown
 # 🛰️ Plataforma Integrada de Control y Observación Sensorial
 
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
