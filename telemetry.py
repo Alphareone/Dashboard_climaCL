@@ -196,6 +196,7 @@ def obtener_telemetria_completa(lat, lon, ciudad, region):
                 "viento_direccion": current.get("wind_direction_10m"),
                 "viento_rafagas": current.get("wind_gusts_10m"),
                 "precipitacion": current.get("precipitation"),
+                "precipitacion_mm": current.get("precipitation", 0.0),  # <--- Agregado para coincidencia exacta con ui_skyform
                 "probabilidad_lluvia": prob_lluvia,
                 "visibilidad_km": vis_km,
                 "es_dia": current.get("is_day", 1),

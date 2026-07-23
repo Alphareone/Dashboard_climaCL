@@ -56,27 +56,57 @@ def mapear_wmo_a_tipo_icono(wmo_code):
         return "sun_cloud"
 
 
-def generar_svg_icono(tipo, size=48):
-    styles = """<style>
-    @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @keyframes float-cloud { 0%, 100% { transform: translateX(0px); } 50% { transform: translateX(4px); } }
-    @keyframes drop-pulse { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(3px); } }
-    .svg-sun { transform-origin: center; animation: spin-slow 12s linear infinite; }
-    .svg-cloud { animation: float-cloud 4s ease-in-out infinite; }
-    .svg-drop { animation: drop-pulse 1.2s ease-in-out infinite; }
-    </style>"""
-    
+def mapear_wmo_a_tipo_icono(wmo_code):
+    """Mapea códigos meteorológicos WMO de la API a los tipos de íconos disponibles."""
+    try:
+        code = int(wmo_code)
+    except (ValueError, TypeError):
+        code = 0
+
+    if code in [0, 1]:
+        return "sun"
+    elif code in [2]:
+        return "sun_cloud"
+    elif code in [3, 45, 48]:
+        return "cloud"
+    elif code in [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99]:
+        return "rain"
+    else:
+        return "sun_cloud"
+
+
+def obtener_flecha_viento(grados):
+    """Retorna la dirección cardinal según los grados del viento."""
+    try:
+        deg = float(grados)
+        direcciones = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"]
+        idx = int((deg + 11.25) / 22.5) % 16
+        return direcciones[idx]
+    except (ValueError, TypeError):
+        return "N/A"
+
+
+def generar_svg_icono(tipo, size=36):
+    """Genera el SVG limpio sin bloques de CSS embebidos que rompan el markdown."""
     iconos = {
-        "sun": f'{styles}<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="14" fill="#38BDF8"/><g class="svg-sun" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"><line x1="32" y1="6" x2="32" y2="12"/><line x1="32" y1="52" x2="32" y2="58"/><line x1="6" y1="32" x2="12" y2="32"/><line x1="52" y1="32" x2="58" y2="32"/></g></svg>',
-        "sun_cloud": f'{styles}<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><circle cx="24" cy="24" r="10" fill="#38BDF8" class="svg-sun"/><path class="svg-cloud" d="M20 48h24a10 10 0 0 0 0-20 10.5 10.5 0 0 0-8-3.5 12 12 0 0 0-21 6.5A10 10 0 0 0 20 48z" fill="#94A3B8"/></svg>',
-        "cloud": f'{styles}<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><path class="svg-cloud" d="M16 44h32a12 12 0 0 0 0-24 13 13 0 0 0-10-4.5 14 14 0 0 0-25 7.5A12 12 0 0 0 16 44z" fill="#E2E8F0"/></svg>',
-        "rain": f'{styles}<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><path class="svg-cloud" d="M14 36h32a10 10 0 0 0 0-20 11 11 0 0 0-8-3.5 12 12 0 0 0-22 6.5A10 10 0 0 0 14 36z" fill="#38BDF8"/><line class="svg-drop" x1="22" y1="42" x2="18" y2="52" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/><line class="svg-drop" x1="32" y1="42" x2="28" y2="52" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/><line class="svg-drop" x1="42" y1="42" x2="38" y2="52" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/></svg>',
+        "sun": f'<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="14" fill="#38BDF8"/><g class="svg-sun" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"><line x1="32" y1="6" x2="32" y2="12"/><line x1="32" y1="52" x2="32" y2="58"/><line x1="6" y1="32" x2="12" y2="32"/><line x1="52" y1="32" x2="58" y2="32"/></g></svg>',
+        "sun_cloud": f'<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><circle cx="24" cy="24" r="10" fill="#38BDF8" class="svg-sun"/><path class="svg-cloud" d="M20 48h24a10 10 0 0 0 0-20 10.5 10.5 0 0 0-8-3.5 12 12 0 0 0-21 6.5A10 10 0 0 0 20 48z" fill="#94A3B8"/></svg>',
+        "cloud": f'<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><path class="svg-cloud" d="M16 44h32a12 12 0 0 0 0-24 13 13 0 0 0-10-4.5 14 14 0 0 0-25 7.5A12 12 0 0 0 16 44z" fill="#E2E8F0"/></svg>',
+        "rain": f'<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none"><path class="svg-cloud" d="M14 36h32a10 10 0 0 0 0-20 11 11 0 0 0-8-3.5 12 12 0 0 0-22 6.5A10 10 0 0 0 14 36z" fill="#38BDF8"/><line class="svg-drop" x1="22" y1="42" x2="18" y2="52" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/><line class="svg-drop" x1="32" y1="42" x2="28" y2="52" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/><line class="svg-drop" x1="42" y1="42" x2="38" y2="52" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/></svg>',
     }
     return iconos.get(tipo, iconos["cloud"])
 
 
 def aplicar_estilos_skyform():
+    """Aplica estilos CSS para la interfaz y animaciones de iconos."""
     st.markdown("""<style>
+    @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes float-cloud { 0%, 100% { transform: translateX(0px); } 50% { transform: translateX(3px); } }
+    @keyframes drop-pulse { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(2px); } }
+    .svg-sun { transform-origin: center; animation: spin-slow 12s linear infinite; }
+    .svg-cloud { animation: float-cloud 4s ease-in-out infinite; }
+    .svg-drop { animation: drop-pulse 1.2s ease-in-out infinite; }
+
     .hero-card { background: linear-gradient(135deg, rgba(14, 116, 144, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 22px; }
     .badge-ahora { background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; }
     .temp-main { font-size: 3.5rem; font-weight: 800; line-height: 1; color: #ffffff; }
@@ -84,7 +114,86 @@ def aplicar_estilos_skyform():
     .metric-value { color: #f3f4f6; font-size: 1.25rem; font-weight: 700; }
     .progress-bar-bg { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 6px; width: 100%; overflow: hidden; margin-top: 6px; }
     .progress-bar-fill { background: #38bdf8; height: 100%; border-radius: 10px; }
+
+    /* Barra Deslizante Horizontal */
+    .hourly-scroll-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 12px;
+        padding: 10px 4px 14px 4px;
+        scrollbar-width: thin;
+        scrollbar-color: #38bdf8 rgba(15, 23, 42, 0.5);
+    }
+    .hourly-scroll-container::-webkit-scrollbar {
+        height: 6px;
+    }
+    .hourly-scroll-container::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 10px;
+    }
+    .hourly-scroll-container::-webkit-scrollbar-thumb {
+        background: #38bdf8;
+        border-radius: 10px;
+    }
+    .hourly-card {
+        flex: 0 0 auto;
+        width: 85px;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 10px 6px;
+        text-align: center;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .hourly-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(56, 189, 248, 0.4);
+        background: rgba(15, 23, 42, 0.85);
+    }
     </style>""", unsafe_allow_html=True)
+
+
+def generar_carrusel_horario(df_h, opcion_vista):
+    """Genera el HTML del carrusel horizontal con concatenación estricta para evitar marcas de código markdown."""
+    if df_h.empty:
+        return ""
+
+    df_24h = df_h.head(24)
+    items_html = ""
+
+    for idx, row in df_24h.iterrows():
+        hora = pd.to_datetime(row['time']).strftime('%H:00')
+        wmo = row.get('weather_code', 0)
+        tipo_icon = mapear_wmo_a_tipo_icono(wmo)
+        icon_svg = generar_svg_icono(tipo_icon, size=28)
+        
+        temp = f"{round(row.get('temperature_2m', 0))}°"
+        sensacion = f"{round(row.get('apparent_temperature', row.get('temperature_2m', 0)))}°"
+        precip = f"{row.get('precipitation_probability', 0)}%"
+        viento_vel = f"{round(row.get('wind_speed_10m', 0))}"
+        viento_dir = obtener_flecha_viento(row.get('wind_direction_10m', 0))
+
+        if opcion_vista == "Precipitaciones":
+            dato_resaltado = f'<div style="color: #0284c7; font-weight: 700; font-size: 0.95rem;">{precip}</div>'
+            sub_dato = f'<div style="color: #64748b; font-size: 0.7rem;">Lluvia</div>'
+        elif opcion_vista == "Viento":
+            dato_resaltado = f'<div style="color: #818cf8; font-weight: 700; font-size: 0.9rem;">{viento_vel} <span style="font-size:0.65rem;">km/h</span></div>'
+            sub_dato = f'<div style="color: #94a3b8; font-size: 0.7rem;">Dir: {viento_dir}</div>'
+        else:
+            dato_resaltado = f'<div style="color: white; font-weight: 700; font-size: 1rem;">{temp}</div>'
+            sub_dato = f'<div style="color: #38bdf8; font-size: 0.7rem;" title="Sensación Térmica">ST: {sensacion}</div>'
+
+        # Construcción directa sin espacios iniciales
+        items_html += (
+            f'<div class="hourly-card">'
+            f'<div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 4px;">{hora}</div>'
+            f'<div style="margin: 4px 0;">{icon_svg}</div>'
+            f'{dato_resaltado}'
+            f'{sub_dato}'
+            f'</div>'
+        )
+
+    return f'<div class="hourly-scroll-container">{items_html}</div>'
 
 
 def render_skyform(datos):
@@ -100,7 +209,7 @@ def render_skyform(datos):
     df_h = datos["df_hourly"]
     df_d = datos["df_daily"]
 
-    # 🌟 APLICAR FONDO DINÁMICO COMPLETO (SITUACIÓN Y CICLO SOLAR)
+    # Fondo dinámico
     aplicar_estilos_base(tipo_icono=act.get("tipo_icono", "sun"), es_dia=act.get("es_dia", 1))
     aplicar_estilos_skyform()
 
@@ -115,38 +224,89 @@ def render_skyform(datos):
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Bento Box Grid
-    col1, col2, col3 = st.columns([2.2, 2, 2])
+    col1, col2, col3 = st.columns([2.4, 1.9, 1.9])
 
-    # COLUMNA 1: Tarjeta Principal
+    # COLUMNA 1: Tarjeta Principal interactiva con Carrusel Deslizante Horizontal
     with col1:
+        # Selector de vista
+        if hasattr(st, "segmented_control"):
+            opcion_vista = st.segmented_control(
+                "Métrica",
+                options=["Temperatura", "Precipitaciones", "Viento"],
+                default="Temperatura",
+                label_visibility="collapsed",
+                key="selector_vista_hero"
+            )
+        else:
+            opcion_vista = st.radio(
+                "Métrica",
+                ["Temperatura", "Precipitaciones", "Viento"],
+                horizontal=True,
+                label_visibility="collapsed",
+                key="selector_vista_hero"
+            )
+
+        # Lógica de conmutación de datos
+        if opcion_vista == "Precipitaciones":
+            precip_mm = act.get("precipitacion_mm", 0.0)
+            valor_principal = f"{precip_mm}"
+            etiqueta_unidad = "mm"
+            subtitulo_condicion = f"Probabilidad actual: {act['probabilidad_lluvia']}%"
+            col_spark = "precipitation_probability" if "precipitation_probability" in df_h.columns else "precipitation"
+            color_linea = "#0284c7"
+        elif opcion_vista == "Viento":
+            valor_principal = f"{act['viento_velocidad']}"
+            etiqueta_unidad = "km/h"
+            subtitulo_condicion = f"Ráfagas: {act['viento_rafagas']} km/h • Dir: {obtener_flecha_viento(act['viento_direccion'])}"
+            col_spark = "wind_speed_10m" if "wind_speed_10m" in df_h.columns else "viento_velocidad"
+            color_linea = "#818cf8"
+        else:  # Temperatura
+            valor_principal = f"{act['temperatura']}°"
+            etiqueta_unidad = "C"
+            subtitulo_condicion = f"{act['condicion']} • Sensación: {act['sensacion']}°"
+            col_spark = "temperature_2m"
+            color_linea = "#38bdf8"
+
         svg_icon = generar_svg_icono(act["tipo_icono"], size=56)
+
+        # Hero Card
         st.markdown(
             f'<div class="hero-card">'
             f'<div style="display: flex; justify-content: space-between; align-items: center;"><span class="badge-ahora">AHORA</span><div>{svg_icon}</div></div>'
             f'<h2 style="margin-top: 10px; margin-bottom: 0px; font-weight: 700; color: white;">{datos["ciudad"]}</h2>'
-            f'<div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 12px;">{act["condicion"]}</div>'
-            f'<div style="display: flex; align-items: baseline; gap: 12px;"><span class="temp-main">{act["temperatura"]}°</span><span style="color: #94a3b8;">Máx: {dia["temp_max"]}° / Mín: {dia["temp_min"]}°</span></div>'
+            f'<div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 8px;">{subtitulo_condicion}</div>'
+            f'<div style="display: flex; align-items: baseline; gap: 8px;">'
+            f'<span class="temp-main">{valor_principal}</span>'
+            f'<span style="color: #38bdf8; font-weight: 700; font-size: 1.1rem;">{etiqueta_unidad}</span>'
+            f'<span style="color: #94a3b8; font-size: 0.85rem; margin-left: 10px;">Máx: {dia["temp_max"]}° / Mín: {dia["temp_min"]}°</span>'
+            f'</div>'
             f'</div>',
             unsafe_allow_html=True
         )
 
-        if not df_h.empty:
+        # Barra deslizante horizontal con pronóstico por hora
+        st.markdown('<div class="metric-title" style="margin-top: 14px; margin-bottom: 4px;">PRONÓSTICO 24 HORAS</div>', unsafe_allow_html=True)
+        html_carrusel = generar_carrusel_horario(df_h, opcion_vista)
+        st.markdown(html_carrusel, unsafe_allow_html=True)
+
+        # Gráfico dinámico tenue inferior
+        if not df_h.empty and col_spark in df_h.columns:
             df_24h = df_h.head(24)
             fig_spark = go.Figure()
             fig_spark.add_trace(go.Scatter(
                 x=df_24h["time"],
-                y=df_24h["temperature_2m"],
+                y=df_24h[col_spark],
                 mode='lines',
-                line=dict(color='#38bdf8', width=2),
+                line=dict(color=color_linea, width=2),
                 fill='tozeroy',
-                fillcolor='rgba(56, 189, 248, 0.08)'
+                fillcolor='rgba(56, 189, 248, 0.05)'
             ))
             fig_spark.update_layout(
-                height=110,
-                margin=dict(l=0, r=0, t=10, b=0),
+                height=70,
+                margin=dict(l=0, r=0, t=5, b=0),
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(showgrid=False, visible=True, tickformat="%H:%00", tickfont=dict(color="#64748b", size=9)),
+                xaxis=dict(showgrid=False, visible=False),
                 yaxis=dict(showgrid=False, visible=False)
             )
             st.plotly_chart(fig_spark, use_container_width=True, config={'displayModeBar': False})
@@ -241,11 +401,6 @@ def render_skyform(datos):
                 nombre_dia = dias_nombre[fecha_dt.weekday()]
                 max_t = round(row['temperature_2m_max'])
                 min_t = round(row['temperature_2m_min'])
-                
-                # Obtener el código de clima diario o usar por defecto
-                wmo_dia = row.get('weather_code', 0) if 'weather_code' in row else 0
-                tipo_icono_dia = mapear_wmo_a_tipo_icono(wmo_dia)
-                svg_icono_dia = generar_svg_icono(tipo_icono_dia, size=28)
 
                 with col:
                     st.markdown(
