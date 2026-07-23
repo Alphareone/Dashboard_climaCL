@@ -1,10 +1,42 @@
-from datetime import datetime
 import folium
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 from streamlit_folium import st_folium
+from config import aplicar_estilos_base
+
+
+def generar_reloj_javascript():
+    """Reloj en vivo dinámico cliente-servidor (avanza segundo a segundo)."""
+    html_reloj = """
+    <div id="live-clock-container" style="text-align: right; font-family: monospace;">
+        <span id="live-clock" style="
+            background: rgba(15, 23, 42, 0.85); 
+            border: 1px solid rgba(56, 189, 248, 0.4); 
+            color: #38bdf8; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-size: 0.9rem; 
+            font-weight: 700;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        ">• --:--:--</span>
+    </div>
+
+    <script>
+    function actualizarReloj() {
+        const ahora = new Date();
+        const horas = String(ahora.getHours()).padStart(2, '0');
+        const minutos = String(ahora.getMinutes()).padStart(2, '0');
+        const segundos = String(ahora.getSeconds()).padStart(2, '0');
+        document.getElementById('live-clock').innerText = "• " + horas + ":" + minutos + ":" + segundos;
+    }
+    actualizarReloj();
+    setInterval(actualizarReloj, 1000);
+    </script>
+    """
+    components.html(html_reloj, height=40)
 
 
 def generar_svg_icono(tipo, size=48):
@@ -28,11 +60,8 @@ def generar_svg_icono(tipo, size=48):
 
 def aplicar_estilos_skyform():
     st.markdown("""<style>
-    .stApp { background-color: #0b0f19; color: #f3f4f6; }
-    .glass-card { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 18px; margin-bottom: 12px; }
-    .hero-card { background: linear-gradient(135deg, rgba(14, 116, 144, 0.6) 0%, rgba(15, 23, 42, 0.85) 100%); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 20px; padding: 22px; }
+    .hero-card { background: linear-gradient(135deg, rgba(14, 116, 144, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 22px; }
     .badge-ahora { background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; }
-    .reloj-live { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; padding: 6px 16px; border-radius: 20px; font-family: monospace; font-weight: 700; }
     .temp-main { font-size: 3.5rem; font-weight: 800; line-height: 1; color: #ffffff; }
     .metric-title { color: #9ca3af; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     .metric-value { color: #f3f4f6; font-size: 1.25rem; font-weight: 700; }
@@ -43,7 +72,6 @@ def aplicar_estilos_skyform():
 
 def render_skyform(datos):
     st_autorefresh(interval=30 * 60 * 1000, limit=None, key="skyform_30min_refresh")
-    aplicar_estilos_skyform()
 
     if not datos:
         st.warning("No hay información meteorológica disponible.")
@@ -55,21 +83,24 @@ def render_skyform(datos):
     df_h = datos["df_hourly"]
     df_d = datos["df_daily"]
 
-    # Header
+    # 🌟 APLICAR FONDO DINÁMICO COMPLETO (SITUACIÓN Y CICLO SOLAR)
+    aplicar_estilos_base(tipo_icono=act.get("tipo_icono", "sun"), es_dia=act.get("es_dia", 1))
+    aplicar_estilos_skyform()
+
+    # Header principal
     col_h1, col_h2 = st.columns([3, 1])
     with col_h1:
         st.markdown("### Plataforma Integrada de Control y Observación Sensorial")
         st.caption(f"{datos['timestamp']} • {datos['ciudad']}, {datos['region']}")
     with col_h2:
-        hora_actual = datetime.now().strftime("%H:%M:%S")
-        st.markdown(f'<div style="text-align: right;"><span class="reloj-live">• {hora_actual}</span></div>', unsafe_allow_html=True)
+        generar_reloj_javascript()
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Grida 3 Columnas
+    # Bento Box Grid
     col1, col2, col3 = st.columns([2.2, 2, 2])
 
-    # COLUMNA 1: Hero Card + Sparkline
+    # COLUMNA 1: Tarjeta Principal
     with col1:
         svg_icon = generar_svg_icono(act["tipo_icono"], size=56)
         st.markdown(
@@ -101,9 +132,9 @@ def render_skyform(datos):
                 xaxis=dict(showgrid=False, visible=True, tickformat="%H:%00", tickfont=dict(color="#64748b", size=9)),
                 yaxis=dict(showgrid=False, visible=False)
             )
-            st.plotly_chart(fig_spark, width="stretch", config={'displayModeBar': False})
+            st.plotly_chart(fig_spark, use_container_width=True, config={'displayModeBar': False})
 
-    # COLUMNA 2: Métricas + Progresos
+    # COLUMNA 2: Indicadores
     with col2:
         st.markdown(
             f'<div class="glass-card">'
@@ -134,7 +165,7 @@ def render_skyform(datos):
             unsafe_allow_html=True
         )
 
-    # COLUMNA 3: Arco Solar + AQI + Mapa
+    # COLUMNA 3: Sol, Calidad del Aire y Mapa
     with col3:
         salida = dia['salida_sol'].split('T')[-1] if dia['salida_sol'] else '07:00'
         puesta = dia['puesta_sol'].split('T')[-1] if dia['puesta_sol'] else '18:00'
@@ -176,7 +207,7 @@ def render_skyform(datos):
             popup=f"Estación Telemetría - {datos['ciudad']}"
         ).add_to(m)
 
-        st_folium(m, height=125, width="stretch")
+        st_folium(m, height=125, use_container_width=True)
 
     # PRONÓSTICO 7 DÍAS
     if not df_d.empty:
