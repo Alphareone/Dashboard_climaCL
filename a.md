@@ -1,4 +1,0 @@
-#aasasa
----
-sun code 
-_--
